@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+    working_dir: /var/www/html
+    expose:
+      - 9000
+    depends_on:
+      - pgsql
+    networks:
+      - appnet
+  pgsql:
+    image: postgres:15.0-alpine3.16
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USERNAME:-hws}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-secret}
+      - POSTGRES_DB=${DB_DATABASE:-laravel}
+    ports:
+      - 12345:5432
+    networks:
+      - appnet
+    volumes:
+      - pgsql-data:/var/lib/postgresql/data
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./localhost.crt:/etc/ssl/certs/localhost.crt
+      - ./localhost.key:/etc/ssl/private/localhost.key
+    working_dir: /var/www/html
+    ports:
+      - 3000:443
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=443
+    networks:
+      - appnet
+    depends_on:
+      - app
+      - pgsql
+networks:
+  appnet:
+    driver: bridge
+
+volumes:
+  pgsql-data:
+    driver: local
