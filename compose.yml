@@ -5,7 +5,6 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./:/var/www/html
-      - /var/www/html/vendor
     working_dir: /var/www/html
     expose:
       - 9000
@@ -13,6 +12,21 @@ services:
       - pgsql
     networks:
       - appnet
+    entrypoint: [ "/bin/sh", "-c", "composer install && php-fpm" ]
+
+  node:
+    build:
+      context: ./
+      dockerfile: Dockerfile.node
+    volumes:
+      - ./:/root/app
+    working_dir: /root/app
+    ports:
+      - 5173:5173
+    networks:
+      - appnet
+    entrypoint: [ "/bin/sh", "-c", "npm install && npm run dev" ]
+
   pgsql:
     image: postgres:15.0-alpine3.16
     restart: always
@@ -26,15 +40,14 @@ services:
       - appnet
     volumes:
       - pgsql-data:/var/lib/postgresql/data
+
   nginx:
     image: nginx:stable-alpine
     volumes:
       - ./default.conf.template:/etc/nginx/templates/default.conf.template
-      - ./localhost.crt:/etc/ssl/certs/localhost.crt
-      - ./localhost.key:/etc/ssl/private/localhost.key
     working_dir: /var/www/html
     ports:
-      - 3000:443
+      - 8000:443
     environment:
       - NGINX_HOST=localhost
       - NGINX_PORT=443
@@ -42,7 +55,9 @@ services:
       - appnet
     depends_on:
       - app
+      - node
       - pgsql
+
 networks:
   appnet:
     driver: bridge

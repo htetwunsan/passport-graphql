@@ -1,0 +1,5 @@
+FROM node:lts-alpine3.17
+
+WORKDIR /root/app
+
+CMD [ "npm", "run", "dev" ]
